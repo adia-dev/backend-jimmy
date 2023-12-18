@@ -1,0 +1,8 @@
+stages:
+  - test
+  - build
+
+job-test:
+  image: debian
+  script:
+    - echo "Hello"
