@@ -3,6 +3,9 @@ stages:
   - build
 
 build:
+  services:
+    - name: docker:24.0.7-dind
+      alias: docker
   stage: build
   image: docker:24.0.7
   script:
