@@ -1,0 +1,86 @@
+# Pour déployer: kubectl --kubeconfig votre-conf.yaml apply -f deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: adia
+  name: backend-deployment
+  labels:
+    adia.app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      adia.app: backend
+  template:
+    metadata:
+      labels:
+        adia.app: backend
+    spec:
+      containers:
+        - name: backend
+          image: adiadev/backend
+          ports:
+            - containerPort: 80
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: adia
+  name: backend-service
+spec:
+  selector:
+    adia.app: backend
+  ports:
+    - protocol: TCP
+      port: 4566
+      targetPort: 80
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  namespace: adia
+  labels:
+    app.kubernetes.io/component: controller
+  # Mettre un nom unique pour la classe ingress
+  name: nginx-adia
+  annotations:
+    ingressclass.kubernetes.io/is-default-class: "true"
+spec:
+  controller: k8s.io/ingress-nginx
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-ingress
+  namespace: adia
+  annotations:
+    # Ajouter une annotation pour indiquer l'issuer à utiliser. letsencrypt-staging-cluster-issuer OU letsencrypt-cluster-issuer
+    # Il s'agit d'issuers globaux que j'ai rajouté sur le cluster, pas besoin de créer votre propre cert-manager
+    cert-manager.io/cluster-issuer: letsencrypt-staging-cluster-issuer
+spec:
+  # Récupérer le nom de la classe ingress ici
+  ingressClassName: nginx-adia
+  tls:
+    - hosts:
+        - backend.4al2.adia.jbienvenu.fr
+      secretName: backend-tls
+  rules:
+    - host: backend.4al2.adia.jbienvenu.fr
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: backend-service
+                port:
+                  number: 4566
+
+
