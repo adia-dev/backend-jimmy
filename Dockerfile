@@ -1,12 +1,25 @@
-FROM python:3.12
+FROM python:3.12-slim as builder
 
 WORKDIR /app
 
-COPY requirements/base.txt requirements.txt
+COPY ./requirements /app/requirements
+RUN pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements/dev.txt
 
-RUN pip install -r requirements.txt
+FROM python:3.12-slim
 
-COPY . .
+RUN groupadd -r django && useradd -d /app -r -g django django
 
-RUN chmod +x ./start.sh
-CMD ["./start.sh"]
+WORKDIR /app
+
+COPY --from=builder /app/wheels /wheels
+COPY --from=builder /app/requirements /requirements
+RUN pip install --no-cache /wheels/*
+
+COPY . /app
+
+RUN chown -R django:django /app
+
+USER django
+
+CMD ["/app/start.sh"]
+
